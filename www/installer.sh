@@ -31,7 +31,6 @@ detect_sudo_tool() {
     fi
 }
 
-
 detect_package_manager() {
     if command -v apt-get >/dev/null 2>&1; then
         echo "apt-get"
@@ -131,18 +130,11 @@ install_packages() {
             exit 1
             ;;
     esac
-
-    
-
-
-
 }
 
 main() {
 
     log_info "Installer downloaded successfully. Starting installation..."
-
-
 
     install_packages
 
@@ -155,37 +147,15 @@ main() {
     mkdir -p ~/.cache
 
 
-    mkdir -p "$DSTPATH"
-
-    # Install Oh My Zsh if not already installed
-    if [ ! -d "$DSTPATH/oh-my-zsh" ]; then
-        download_file https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh /tmp/OhMyZsh.sh
-        chmod +x /tmp/OhMyZsh.sh
-        ZSH="$DSTPATH/oh-my-zsh" /tmp/OhMyZsh.sh --unattended
-        rm /tmp/OhMyZsh.sh
+    # Delete $DSTPATH if it exists to ensure a clean install
+    if [ -d "$DSTPATH" ]; then
+        rm -rf "$DSTPATH"
     fi
 
-
-    # Download configuration files
-    download_file "$BASEURL/theme.zsh" "$DSTPATH/theme.zsh"
-    download_file "$BASEURL/zshrc" "$DSTPATH/zshrc"
-    download_file "$BASEURL/latest_version" "$DSTPATH/version"
-    
-
-cat <<EOF > "$HOME/.zshrc"
-INSTALLBASE=$DSTPATH
-BASEURL="$BASEURL"
-EOF
-
-    # Copy over the log functions and source the main zshrc from the installer
-    { 
-        declare -f log_info 
-        declare -f log_error
-    } >> "$HOME/.zshrc"
+    git clone --depth=1 https://github.com/AWildLeon/lhzsh.git "$DSTPATH"
 
     echo "source $DSTPATH/zshrc" >> "$HOME/.zshrc"
 
     # Change default shell to Zsh
     chsh -s "$(which zsh)"
-
 }
