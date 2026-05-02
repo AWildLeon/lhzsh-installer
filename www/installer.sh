@@ -154,7 +154,8 @@ main() {
 
     git clone --depth=1 https://github.com/AWildLeon/lhzsh.git "$DSTPATH"
 
-    echo "source $DSTPATH/zshrc" >> "$HOME/.zshrc"
+    rm ~/.zshrc
+    ~/.lhzsh/bin/lhzsh install
 
     # Change default shell to Zsh
     chsh -s "$(which zsh)"
