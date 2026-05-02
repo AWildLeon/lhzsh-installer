@@ -156,6 +156,7 @@ main() {
 
     rm ~/.zshrc
     ~/.lhzsh/bin/lhzsh install
+    mkdir -p "$DSTPATH/data"
 
     # Change default shell to Zsh
     chsh -s "$(which zsh)"
