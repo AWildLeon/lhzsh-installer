@@ -208,5 +208,14 @@ main() {
     mkdir -p "$DSTPATH/data"
 
     # Change default shell to Zsh
-    chsh -s "$(which zsh)"
+    local current_user current_shell
+    current_user=$(id -un)
+    current_shell=$(getent passwd "$current_user" | cut -d: -f7)
+    
+    if [ "$current_shell" != "$(which zsh)" ]; then
+        log_info "Changing default shell to Zsh..."
+        chsh -s "$(which zsh)"
+    else
+        log_info "Default shell is already set to Zsh."
+    fi
 }
