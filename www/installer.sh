@@ -162,12 +162,16 @@ main() {
     mkdir -p ~/.cache
 
 
-    # Delete $DSTPATH if it exists to ensure a clean install
-    if [ -d "$DSTPATH" ]; then
-        rm -rf "$DSTPATH"
-    fi
+    if [ ! -d "$DSTPATH/.git" ]; then
+        # Delete $DSTPATH if it exists and is not a repo to ensure a clean install
+        if [ -d "$DSTPATH" ]; then
+            rm -rf "$DSTPATH"
+        fi
 
-    git clone --depth=1 https://github.com/AWildLeon/lhzsh.git "$DSTPATH"
+        git clone --depth=1 https://github.com/AWildLeon/lhzsh.git "$DSTPATH"
+    else
+        ~/.lhzsh/bin/lhzsh update
+    fi
 
     mkdir -p ~/.config ~/.local/bin
 
