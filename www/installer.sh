@@ -109,7 +109,7 @@ install_packages() {
 
 
     # Install other common packages
-    local packages=("zsh" "git" "curl" "zoxide" "unzip" "jq")
+    local packages=("zsh" "git" "curl" "zoxide" "unzip" "jq" "eza")
     log_info "Installing common packages: ${packages[*]}"
 
     case $(detect_package_manager) in
