@@ -47,7 +47,7 @@ detect_package_manager() {
 }
 
 debian12_install_fastfetch() {
-    local arch package_name url sudo_tool
+        local arch package_name url sudo_tool
     arch=$(uname -m)
 
     case "$arch" in
@@ -203,7 +203,7 @@ main() {
     fi
 
 
-    rm ~/.zshrc
+    rm -f ~/.zshrc
     ~/.lhzsh/bin/lhzsh install
     mkdir -p "$DSTPATH/data"
 
