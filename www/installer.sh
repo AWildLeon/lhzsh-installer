@@ -90,27 +90,30 @@ install_packages() {
     local sudo_tool
     sudo_tool=$(detect_sudo_tool)
 
+    # Install other common packages
+    local packages=("zsh" "git" "curl" "zoxide" "unzip" "jq" "eza")
+
     case $ID in 
         debian)
             if [ "$VERSION_ID" = "12" ]; then
                 debian12_install_fastfetch
             else
-                apt-get install -y fastfetch
+                $sudo_tool apt-get install -y fastfetch
             fi
             ;;
         ubuntu)
             if [ "$VERSION_ID" = "24.04" ]; then
                 debian12_install_fastfetch
             else
-                apt-get install -y fastfetch
+                $sudo_tool apt-get install -y fastfetch
             fi
+            ;;
+        *)
+            packages+=("fastfetch")
             ;;
     esac
 
-
-    # Install other common packages
-    local packages=("zsh" "git" "curl" "zoxide" "unzip" "jq" "eza")
-    log_info "Installing common packages: ${packages[*]}"
+    log_info "Installing common packages:\n$(printf "  - %s\n" "${packages[@]}")"
 
     case $(detect_package_manager) in
         apt-get)
@@ -127,7 +130,19 @@ install_packages() {
             ;;
         *)
             log_error "Unsupported package manager for installing common packages."
-            exit 1
+            local missing_cmds=()
+            for cmd in fastfetch "${packages[@]}"; do
+                if ! command -v "$cmd" >/dev/null 2>&1; then
+                    missing_cmds+=("$cmd")
+                fi
+            done
+            if [ ${#missing_cmds[@]} -gt 0 ]; then
+                log_error "The following required commands are missing:\n$(printf "  - %s\n" "${missing_cmds[@]}")"
+                log_error "Please install them manually."
+                exit 1
+            else
+                log_info "All required commands are already installed."
+            fi
             ;;
     esac
 }
