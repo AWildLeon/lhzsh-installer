@@ -154,6 +154,40 @@ main() {
 
     git clone --depth=1 https://github.com/AWildLeon/lhzsh.git "$DSTPATH"
 
+    mkdir -p ~/.config ~/.local/bin
+
+    
+    # link eza config
+    local skip_eza_link=false
+    if [ -L ~/.config/eza ]; then
+        if [ "$(readlink ~/.config/eza)" = "$HOME/.lhzsh/eza-config" ]; then
+            skip_eza_link=true
+        else
+            rm ~/.config/eza
+        fi
+    elif [ -d ~/.config/eza ]; then
+        if ! rmdir ~/.config/eza 2>/dev/null; then
+            log_error "eza config dir is not empty, skipping"
+            skip_eza_link=true
+        fi
+    elif [ -e ~/.config/eza ]; then
+        if rm ~/.config/eza; then
+            log_info "Removed existing eza config file"
+        else
+            log_error "Failed to remove existing eza config file"
+            skip_eza_link=true
+        fi
+    fi
+
+    if [ "$skip_eza_link" = false ]; then
+        if ln -s ~/.lhzsh/eza-config ~/.config/eza; then
+            log_info "eza config linked successfully"
+        else
+            log_error "Failed to link eza config"
+        fi
+    fi
+
+
     rm ~/.zshrc
     ~/.lhzsh/bin/lhzsh install
     mkdir -p "$DSTPATH/data"
