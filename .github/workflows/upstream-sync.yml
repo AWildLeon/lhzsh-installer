@@ -1,0 +1,113 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Check for upstream changes
+        id: check
+        run: |
+          git remote add upstream https://github.com/AWildLeon/LH-ZSH.git
+          git fetch upstream
+
+          LAST_SYNCED=$(cat .upstream-sync 2>/dev/null || echo "")
+          UPSTREAM_HEAD=$(git rev-parse upstream/main)
+
+          if [ "$LAST_SYNCED" = "$UPSTREAM_HEAD" ]; then
+            echo "No new upstream changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "New upstream changes detected: $LAST_SYNCED -> $UPSTREAM_HEAD"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "upstream_head=$UPSTREAM_HEAD" >> "$GITHUB_OUTPUT"
+            echo "last_synced=$LAST_SYNCED" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create sync branch
+        if: steps.check.outputs.changed == 'true'
+        id: branch
+        run: |
+          BRANCH="sync/upstream-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Merge upstream changes with Claude
+        if: steps.check.outputs.changed == 'true'
+        uses: anthropics/claude-code-action@beta
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          direct_prompt: |
+            You are maintaining FR-ZSH, a private-infrastructure fork of AWildLeon/LH-ZSH.
+
+            The upstream repo has new commits. Last synced: ${{ steps.check.outputs.last_synced }}. New upstream HEAD: ${{ steps.check.outputs.upstream_head }}.
+
+            The upstream remote is already fetched as `upstream/main`. Do the following:
+
+            1. Run `git log ${{ steps.check.outputs.last_synced }}..upstream/main --oneline` to see what changed upstream.
+            2. For each changed upstream file, inspect what improved and apply the relevant changes to the fork's equivalent files:
+               - upstream `www/installer.sh` or `www/zsh.sh` → fork's `www/zsh.sh`
+               - upstream `www/zshrc` → fork's `www/zshrc` (only if upstream still ships one)
+               - upstream `www/theme.omp.json` → fork's `www/theme.omp.json`
+               - upstream `www/latest_version` → skip (fork manages its own versioning)
+               - upstream `www/index.php` / `www/content.html` → skip (fork uses static HTML)
+            3. After applying changes, do a global search-and-replace throughout the modified files:
+               - `zsh.onlh.de` → `zsh.onfr.de`
+               - `lhzsh` → `frzsh` (in paths, variable names, directory names)
+               - `lhzsh` → `frzsh` in strings like `.lhzsh` → `.frzsh`
+               - `LH ZSH` → `FR ZSH` in any user-facing strings
+               - `AWildLeon/lhzsh` git clone URLs → skip or leave as attribution comment
+            4. Preserve fork-specific logic that has no upstream equivalent:
+               - `cleanup_old_zsh` function
+               - Oh My Zsh installation
+               - Oh My Posh installation
+               - "Flo's fork of Leon's ZSH Config" messaging
+            5. Update `.upstream-sync` to contain exactly: ${{ steps.check.outputs.upstream_head }}
+            6. Commit all changes with message: `sync: merge upstream changes ${{ steps.check.outputs.last_synced }}` (short hash OK).
+
+            If upstream has no meaningful changes relevant to the fork (e.g. only PHP/web changes), still update `.upstream-sync` and commit that alone.
+          allowed_tools: "Bash,Read,Edit,Write,Glob,Grep"
+
+      - name: Push branch and open PR
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          UPSTREAM_HEAD: ${{ steps.check.outputs.upstream_head }}
+          LAST_SYNCED: ${{ steps.check.outputs.last_synced }}
+        run: |
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "sync: upstream changes from AWildLeon/LH-ZSH" \
+            --body "$(cat <<EOF
+          Automated sync of upstream improvements from [AWildLeon/LH-ZSH](https://github.com/AWildLeon/LH-ZSH).
+
+          **Upstream diff:** [\`${LAST_SYNCED:0:7}\`..\`${UPSTREAM_HEAD:0:7}\`](https://github.com/AWildLeon/LH-ZSH/compare/${LAST_SYNCED}...${UPSTREAM_HEAD})
+
+          Merged by Claude — \`zsh.onlh.de\` → \`zsh.onfr.de\` and \`lhzsh\` → \`frzsh\` substitutions applied automatically.
+          EOF
+          )" \
+            --base main \
+            --head "$BRANCH" \
+            --label "upstream-sync"
+
+          gh pr merge "$BRANCH" --squash --auto --delete-branch
