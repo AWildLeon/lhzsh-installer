@@ -38,7 +38,7 @@ jobs:
           find . -type f -name '*.sh' -exec sed -i 's/INSERT-PROJECT-NAME/LH-ZSH/g' {} +
 
       - name: Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_IP }}
           username: ${{ secrets.FTP_USER }}
