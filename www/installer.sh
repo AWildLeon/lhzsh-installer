@@ -172,6 +172,20 @@ install_packages() {
     esac
 }
 
+change_default_shell_to_zsh() {
+    # Change default shell to Zsh
+    local current_user current_shell
+    current_user=$(id -un)
+    current_shell=$(getent passwd "$current_user" | cut -d: -f7)
+    
+    if [ "$current_shell" != "$(which zsh)" ]; then
+        log_info "Changing default shell to Zsh..."
+        chsh -s "$(which zsh)"
+    else
+        log_info "Default shell is already set to Zsh."
+    fi
+}
+
 main() {
 
     log_info "Installer downloaded successfully. Starting installation..."
@@ -236,15 +250,10 @@ main() {
     ~/.lhzsh/bin/lhzsh install
     mkdir -p "$DSTPATH/data"
 
-    # Change default shell to Zsh
-    local current_user current_shell
-    current_user=$(id -un)
-    current_shell=$(getent passwd "$current_user" | cut -d: -f7)
-    
-    if [ "$current_shell" != "$(which zsh)" ]; then
-        log_info "Changing default shell to Zsh..."
-        chsh -s "$(which zsh)"
+    if [ "$TERMUX_MODE" == "true" ]; then
+        chsh -s "zsh"
     else
-        log_info "Default shell is already set to Zsh."
+        change_default_shell_to_zsh
     fi
+    
 }
