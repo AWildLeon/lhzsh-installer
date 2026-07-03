@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091
-. /etc/os-release || {
-    log_error "Failed to source /etc/os-release"
-    exit 1
-}
 
 log_info() {
     local message="$1"
@@ -15,7 +11,33 @@ log_error() {
     echo -e "$(date '+%Y-%m-%d %H:%M:%S') - \033[31mERROR: $message\033[0m" >&2
 }
 
+
+if [ ! -z "$TERMUX__ROOTFS_DIR" ]; then
+    TERMUX_MODE=true
+else
+    TERMUX_MODE=false
+fi
+
+if [ "$TERMUX_MODE" == "false" ]; then
+    
+. /etc/os-release || {
+    log_error "Failed to source /etc/os-release"
+    exit 1
+}
+
+else
+    log_info "Running in Termux mode."
+    ID=termux
+fi
+
+
 detect_sudo_tool() {
+    if [ "$TERMUX_MODE" == "true" ]; then
+        echo ""
+        log_info "Running in Termux mode, no sudo tool required."
+        return
+    fi
+
     if [ "$(id -u)" -eq 0 ]; then
         echo ""
         log_info "Running as root, no sudo tool required."
@@ -107,6 +129,9 @@ install_packages() {
             else
                 $sudo_tool apt-get install -y fastfetch
             fi
+            ;;
+        termux)
+            packages+=("fastfetch" "gettext")
             ;;
         *)
             packages+=("fastfetch")
