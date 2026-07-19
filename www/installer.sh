@@ -12,7 +12,7 @@ log_error() {
 }
 
 
-if [ ! -z "$TERMUX__ROOTFS_DIR" ]; then
+if [[ -n "${TERMUX__ROOTFS_DIR:-}" ]]; then
     TERMUX_MODE=true
 else
     TERMUX_MODE=false
